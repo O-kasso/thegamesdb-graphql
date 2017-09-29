@@ -11,13 +11,36 @@ const {
 
 const GameTitleType = new GraphQLObjectType({
   name: 'GameTitle',
-  description: '...',
+  description: 'Video game title',
 
   fields: () => ({
     name: {
       type: GraphQLString,
-      resolve: xml =>
-        xml.Data.Game[0].GameTitle[0]
+      resolve: xml => xml.Data.Game[0].GameTitle[0]
+    },
+    gameId: {
+      type: GraphQLString,
+      resolve: xml => xml.Data.Game[0].id[0]
+    },
+    platform: {
+      type: PlatformType,
+      resolve: xml => xml.Data.Game[0]
+    }
+  })
+});
+
+const PlatformType = new GraphQLObjectType({
+  name: 'Platform',
+  description: 'Game system platform name',
+
+  fields: () => ({
+    name: {
+      type: GraphQLString,
+      resolve: xml => xml.Platform[0]
+    },
+    platformId: {
+      type: GraphQLString,
+      resolve: xml => xml.PlatformId[0]
     }
   })
 });
@@ -30,6 +53,17 @@ module.exports = new GraphQLSchema({
     fields: () => ({
       gameTitle: {
         type: GameTitleType,
+        args: {
+          id: { type: GraphQLInt }
+        },
+        resolve: (root, args) => fetch(
+          `http://thegamesdb.net/api/GetGame.php?id=${args.id}`
+        )
+        .then(response => response.text())
+        .then(parseXML)
+      },
+      platform: {
+        type: PlatformType,
         args: {
           id: { type: GraphQLInt }
         },
