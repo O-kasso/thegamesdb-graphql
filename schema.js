@@ -24,7 +24,14 @@ const GameTitleType = new GraphQLObjectType({
     },
     platform: {
       type: PlatformType,
-      resolve: xml => xml.Data.Game[0]
+      resolve: xml => {
+        const platId = xml.Data.Game[0].PlatformId[0];
+        return fetch(
+          `http://thegamesdb.net/api/GetPlatform.php?id=${platId}`
+        )
+          .then(response => response.text())
+          .then(parseXML);
+      }
     }
   })
 });
@@ -36,11 +43,15 @@ const PlatformType = new GraphQLObjectType({
   fields: () => ({
     name: {
       type: GraphQLString,
-      resolve: xml => xml.Platform[0]
+      resolve: xml => xml.Data.Platform[0].Platform[0]
+    },
+    manufacturer: {
+      type: GraphQLString,
+      resolve: xml => xml.Data.Platform[0].manufacturer[0]
     },
     platformId: {
       type: GraphQLString,
-      resolve: xml => xml.PlatformId[0]
+      resolve: xml => xml.Data.Platform[0].id[0]
     }
   })
 });
