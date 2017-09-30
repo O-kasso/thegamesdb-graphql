@@ -47,7 +47,17 @@ const PlatformType = new GraphQLObjectType({
     },
     manufacturer: {
       type: GraphQLString,
-      resolve: xml => xml.Data.Platform[0].manufacturer[0]
+      resolve: xml => {
+        try {
+          return xml.Data.Platform[0].developer[0];
+        }
+        catch(err) {
+          try {
+            return xml.Data.Platform[0].manufacturer[0];
+          }
+          catch(err) { return "null"; }
+        }
+      }
     },
     platformId: {
       type: GraphQLString,
