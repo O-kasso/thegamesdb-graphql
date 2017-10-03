@@ -21,18 +21,44 @@ const GameType = new GraphQLObjectType({
       type: GraphQLString,
       resolve: xml => xml.Data.Game[0].GameTitle[0]
     },
+    developer: {
+      type: GraphQLString,
+      resolve: xml => xml.Data.Game[0].Developer[0]
+    },
+    publisher: {
+      type: GraphQLString,
+      resolve: xml => {
+        if (!!xml.Data.Game[0].Publisher) {
+          return xml.Data.Game[0].Publisher[0];
+        }
+        else { return "N/A"; }
+      }
+    },
     gamesDBID: {
       type: GraphQLString,
       resolve: xml => xml.Data.Game[0].id[0]
     },
+    esrb: {
+      type: GraphQLString,
+      resolve: xml => {
+        if (!!xml.Data.Game[0].ESRB) {
+          return xml.Data.Game[0].ESRB[0];
+        }
+        else { return "Not Rated"; }
+      }
+    },
     platforms: {
       type: new GraphQLList(PlatformType),
       resolve: xml => {
-        let platIDs = xml.Data.Game[0].Similar[0].Game.map(elem => elem.PlatformId[0]);
-        platIDs.unshift(xml.Data.Game[0].PlatformId[0]);
+        let platformIDs = xml.Data.Game[0].PlatformId; //returns Arrah
+
+        if (!!xml.Data.Game[0].Similar) {
+          platformIDs =
+            [...platformIDs, ...xml.Data.Game[0].Similar[0].Game.map(elem => elem.PlatformId[0])];
+        }
 
         return Promise.all(
-          platIDs.map(id =>
+          platformIDs.map(id =>
             fetch(`${gamesDBUri}/GetPlatform.php?id=${id}`)
               .then(response => response.text())
               .then(parseXML)
@@ -54,15 +80,13 @@ const PlatformType = new GraphQLObjectType({
     manufacturer: {
       type: GraphQLString,
       resolve: xml => {
-        try {
+        if (!!xml.Data.Platform[0].developer) {
           return xml.Data.Platform[0].developer[0];
         }
-        catch(err) {
-          try {
-            return xml.Data.Platform[0].manufacturer[0];
-          }
-          catch(err) { return "null"; }
+        else if (!!xml.Data.Platform[0].manufacturer) {
+          return xml.Data.Platform[0].manufacturer[0];
         }
+        else { return "N/A"; }
       }
     },
     platformId: {
