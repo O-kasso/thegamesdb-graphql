@@ -1,36 +1,42 @@
 const fetch = require('node-fetch');
 const util = require('util');
 const parseXML = util.promisify(require('xml2js').parseString);
+const gamesDBUri = 'http://thegamesdb.net/api';
 const {
   GraphQLSchema,
   GraphQLObjectType,
   GraphQLInt,
-  GraphQLString
+  GraphQLString,
+  GraphQLList
 } = require('graphql');
 
 
-const GameTitleType = new GraphQLObjectType({
-  name: 'GameTitle',
-  description: 'Video game title',
+
+const GameType = new GraphQLObjectType({
+  name: 'Game',
+  description: 'Video game',
 
   fields: () => ({
-    name: {
+    title: {
       type: GraphQLString,
       resolve: xml => xml.Data.Game[0].GameTitle[0]
     },
-    gameId: {
+    gamesDBID: {
       type: GraphQLString,
       resolve: xml => xml.Data.Game[0].id[0]
     },
-    platform: {
-      type: PlatformType,
+    platforms: {
+      type: new GraphQLList(PlatformType),
       resolve: xml => {
-        const platId = xml.Data.Game[0].PlatformId[0];
-        return fetch(
-          `http://thegamesdb.net/api/GetPlatform.php?id=${platId}`
-        )
-          .then(response => response.text())
-          .then(parseXML);
+        let platIDs = xml.Data.Game[0].Similar[0].Game.map(elem => elem.PlatformId[0]);
+        platIDs.unshift(xml.Data.Game[0].PlatformId[0]);
+
+        return Promise.all(
+          platIDs.map(id =>
+            fetch(`${gamesDBUri}/GetPlatform.php?id=${id}`)
+              .then(response => response.text())
+              .then(parseXML)
+        ));
       }
     }
   })
@@ -72,14 +78,12 @@ module.exports = new GraphQLSchema({
     description: '...',
 
     fields: () => ({
-      gameTitle: {
-        type: GameTitleType,
+      game: {
+        type: GameType,
         args: {
           id: { type: GraphQLInt }
         },
-        resolve: (root, args) => fetch(
-          `http://thegamesdb.net/api/GetGame.php?id=${args.id}`
-        )
+        resolve: (root, args) => fetch(`${gamesDBUri}/GetGame.php?id=${args.id}`)
         .then(response => response.text())
         .then(parseXML)
       },
@@ -88,9 +92,7 @@ module.exports = new GraphQLSchema({
         args: {
           id: { type: GraphQLInt }
         },
-        resolve: (root, args) => fetch(
-          `http://thegamesdb.net/api/GetGame.php?id=${args.id}`
-        )
+        resolve: (root, args) => fetch(`${gamesDBUri}/GetPlatform.php?id=${args.id}`)
         .then(response => response.text())
         .then(parseXML)
       }
